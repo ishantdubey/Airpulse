@@ -1,0 +1,1355 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#101827">
+<title>AirPulse — Air Quality & Weather</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+  --bg:#101827;
+  --surface:#1a2638;
+  --surface2:#243248;
+  --text:#f3f6fc;
+  --muted:#9baac0;
+  --border:rgba(255,255,255,.09);
+  --accent:#62d6c4;
+  --shadow:0 12px 35px rgba(0,0,0,.15);
+}
+
+@media(prefers-color-scheme:light) {
+  :root {
+    --bg:#f2f5fa;
+    --surface:#ffffff;
+    --surface2:#edf1f7;
+    --text:#182338;
+    --muted:#69778d;
+    --border:rgba(0,0,0,.08);
+    --shadow:0 12px 35px rgba(30,50,80,.07);
+  }
+}
+
+* {box-sizing:border-box;margin:0;padding:0}
+
+body {
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,sans-serif;
+  min-height:100vh;
+  transition:background .3s,color .3s;
+}
+
+button,input {font:inherit}
+button {cursor:pointer}
+
+.container {
+  max-width:1150px;
+  margin:auto;
+  padding:25px 20px 50px;
+}
+
+header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:15px;
+  margin-bottom:32px;
+}
+
+.logo {
+  font-size:25px;
+  font-weight:850;
+  letter-spacing:-1px;
+}
+
+.logo span {color:var(--accent)}
+
+.tagline {
+  color:var(--muted);
+  font-size:12px;
+  margin-top:3px;
+}
+
+.status {
+  font-size:12px;
+  color:var(--muted);
+}
+
+.search-area {
+  position:relative;
+  display:flex;
+  gap:10px;
+  margin-bottom:25px;
+  flex-wrap:wrap;
+}
+
+.search-box {
+  flex:1;
+  min-width:200px;
+  position:relative;
+}
+
+.search-box input {
+  width:100%;
+  padding:15px 18px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+  color:var(--text);
+  outline:none;
+}
+
+.search-box input:focus {
+  border-color:var(--accent);
+}
+
+.search-box input::placeholder {color:var(--muted)}
+
+.suggestions {
+  position:absolute;
+  top:110%;
+  left:0;
+  right:0;
+  z-index:10;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:13px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+
+.suggestion {
+  padding:13px 16px;
+  cursor:pointer;
+  border-bottom:1px solid var(--border);
+  font-size:14px;
+}
+
+.suggestion:hover {background:var(--surface2)}
+
+.hidden {display:none!important}
+
+.btn {
+  border:none;
+  padding:14px 17px;
+  border-radius:13px;
+  font-weight:700;
+  background:var(--surface2);
+  color:var(--text);
+  transition:.2s;
+}
+
+.btn:hover {transform:translateY(-2px)}
+
+.primary {
+  background:var(--accent);
+  color:#10252a;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:18px;
+}
+
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:22px;
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  min-width:0;
+}
+
+.full {grid-column:1/-1}
+
+.card-title {
+  font-size:14px;
+  color:var(--muted);
+  font-weight:700;
+  margin-bottom:17px;
+  letter-spacing:.3px;
+}
+
+.city-heading {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:17px;
+}
+
+.city-heading h1 {font-size:26px}
+
+.city-heading p {
+  font-size:12px;
+  color:var(--muted);
+  margin-top:5px;
+}
+
+.aqi-layout {
+  display:flex;
+  align-items:center;
+  gap:24px;
+  flex-wrap:wrap;
+}
+
+.aqi-number {
+  font-size:75px;
+  line-height:1;
+  font-weight:850;
+  letter-spacing:-5px;
+}
+
+.aqi-category {
+  display:inline-block;
+  padding:8px 13px;
+  border-radius:30px;
+  font-size:12px;
+  font-weight:800;
+  margin-top:12px;
+  color:#101827;
+}
+
+.aqi-description {
+  color:var(--muted);
+  font-size:13px;
+  margin-top:8px;
+  max-width:340px;
+  line-height:1.6;
+}
+
+.pollutants {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:25px;
+}
+
+.pollutant {
+  background:var(--surface2);
+  padding:14px;
+  border-radius:13px;
+}
+
+.pollutant small {
+  color:var(--muted);
+  font-size:11px;
+}
+
+.pollutant strong {
+  display:block;
+  font-size:19px;
+  margin-top:5px;
+}
+
+.health-tip {
+  margin-top:18px;
+  padding:15px;
+  border-radius:12px;
+  background:var(--surface2);
+  font-size:13px;
+  line-height:1.6;
+}
+
+.weather-main {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:15px;
+}
+
+.temperature {
+  font-size:65px;
+  font-weight:800;
+  letter-spacing:-4px;
+}
+
+.weather-icon {font-size:65px}
+
+.weather-condition {
+  color:var(--muted);
+  font-size:14px;
+}
+
+.weather-details {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  margin-top:20px;
+}
+
+.weather-details div {
+  padding:13px;
+  background:var(--surface2);
+  border-radius:12px;
+  font-size:13px;
+}
+
+.weather-details strong {
+  display:block;
+  margin-top:5px;
+  font-size:17px;
+}
+
+.chart-container {
+  height:270px;
+  position:relative;
+  width:100%;
+}
+
+.forecast {
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  gap:9px;
+}
+
+.day {
+  background:var(--surface2);
+  padding:15px 8px;
+  border-radius:13px;
+  text-align:center;
+}
+
+.day small {
+  color:var(--muted);
+  font-size:11px;
+}
+
+.day .icon {
+  display:block;
+  font-size:25px;
+  margin:12px 0;
+}
+
+.day strong {
+  font-size:13px;
+  display:block;
+}
+
+.day .rain {
+  font-size:11px;
+  color:var(--accent);
+  margin-top:9px;
+}
+
+.toggle {
+  display:flex;
+  gap:5px;
+  background:var(--surface2);
+  padding:4px;
+  border-radius:10px;
+}
+
+.toggle button {
+  padding:7px 12px;
+  border:none;
+  background:transparent;
+  color:var(--muted);
+  border-radius:8px;
+}
+
+.toggle button.active {
+  background:var(--accent);
+  color:#10252a;
+  font-weight:800;
+}
+
+.footer {
+  text-align:center;
+  color:var(--muted);
+  font-size:11px;
+  margin-top:30px;
+  line-height:1.8;
+}
+
+.message {
+  padding:14px;
+  border-radius:12px;
+  background:var(--surface2);
+  color:var(--muted);
+  margin-bottom:15px;
+  font-size:13px;
+}
+
+.loading {
+  opacity:.55;
+  pointer-events:none;
+}
+
+.spinner {
+  display:inline-block;
+  width:15px;
+  height:15px;
+  border:2px solid var(--muted);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+  vertical-align:middle;
+}
+
+@keyframes spin {to{transform:rotate(360deg)}}
+
+@media(max-width:650px) {
+  .container {padding:18px 13px 35px}
+  .grid {grid-template-columns:1fr}
+  .full {grid-column:auto}
+  .card {padding:18px}
+  .forecast {grid-template-columns:repeat(4,1fr)}
+  .aqi-number {font-size:65px}
+  .weather-main {align-items:center}
+  .temperature {font-size:57px}
+  .pollutants {gap:8px}
+  .pollutant {padding:11px}
+  .search-area .btn {flex:1}
+}
+
+@media(max-width:380px) {
+  .forecast {grid-template-columns:repeat(2,1fr)}
+  .pollutants {grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <div>
+    <div class="logo">Air<span>Pulse</span> 🌿</div>
+    <div class="tagline">Know your air. Plan your day.</div>
+  </div>
+  <div class="status" id="status">● Connecting...</div>
+</header>
+
+<div class="search-area">
+  <div class="search-box">
+    <input
+      id="cityInput"
+      type="search"
+      placeholder="Search any city worldwide..."
+      autocomplete="off"
+      aria-label="Search city"
+    >
+    <div class="suggestions hidden" id="suggestions"></div>
+  </div>
+  <button class="btn primary" id="searchBtn">Search</button>
+  <button class="btn" id="locationBtn">📍 My location</button>
+</div>
+
+<div id="message" class="message hidden" role="status"></div>
+
+<div class="city-heading">
+  <div>
+    <h1 id="cityName">Loading city...</h1>
+    <p id="updated">Fetching live environmental data...</p>
+  </div>
+  <div class="toggle" aria-label="Temperature unit">
+    <button id="celsius" class="active">°C</button>
+    <button id="fahrenheit">°F</button>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- AIR QUALITY -->
+  <section class="card">
+    <div class="card-title">🌿 CURRENT AIR QUALITY</div>
+
+    <div class="aqi-layout">
+      <div>
+        <div class="aqi-number" id="aqiValue">--</div>
+        <div class="aqi-category" id="aqiCategory">Loading</div>
+      </div>
+      <div>
+        <div class="card-title" style="margin:0 0 7px">US AQI INDEX</div>
+        <p class="aqi-description" id="aqiDescription">
+          Getting your air quality information...
+        </p>
+        <p class="aqi-description" id="dominant">
+          Dominant pollutant: --
+        </p>
+      </div>
+    </div>
+
+    <div class="pollutants">
+      <div class="pollutant">
+        <small>PM2.5 · µg/m³</small>
+        <strong id="pm25">--</strong>
+      </div>
+      <div class="pollutant">
+        <small>PM10 · µg/m³</small>
+        <strong id="pm10">--</strong>
+      </div>
+      <div class="pollutant">
+        <small>O₃ · µg/m³</small>
+        <strong id="o3">--</strong>
+      </div>
+      <div class="pollutant">
+        <small>NO₂ · µg/m³</small>
+        <strong id="no2">--</strong>
+      </div>
+      <div class="pollutant">
+        <small>SO₂ · µg/m³</small>
+        <strong id="so2">--</strong>
+      </div>
+      <div class="pollutant">
+        <small>CO · µg/m³</small>
+        <strong id="co">--</strong>
+      </div>
+    </div>
+
+    <div class="health-tip" id="healthTip">
+      💡 Health advice will appear here.
+    </div>
+  </section>
+
+  <!-- WEATHER -->
+  <section class="card">
+    <div class="card-title">☀️ CURRENT WEATHER</div>
+
+    <div class="weather-main">
+      <div>
+        <div class="temperature" id="temperature">--°</div>
+        <div class="weather-condition" id="condition">Loading...</div>
+      </div>
+      <div class="weather-icon" id="weatherIcon">🌤️</div>
+    </div>
+
+    <div class="weather-details">
+      <div>
+        🌡️ Feels like
+        <strong id="feelsLike">--</strong>
+      </div>
+      <div>
+        💧 Humidity
+        <strong id="humidity">--%</strong>
+      </div>
+      <div>
+        💨 Wind
+        <strong id="wind">-- km/h</strong>
+      </div>
+      <div>
+        🌧️ Precipitation
+        <strong id="precipitation">-- mm</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOURLY CHART -->
+  <section class="card full">
+    <div class="card-title">📈 NEXT 24 HOURS — TEMPERATURE</div>
+    <div class="chart-container">
+      <canvas id="hourlyChart" aria-label="24 hour temperature forecast"></canvas>
+    </div>
+  </section>
+
+  <!-- WEEKLY FORECAST -->
+  <section class="card full">
+    <div class="card-title">📅 7-DAY WEATHER FORECAST</div>
+    <div class="forecast" id="forecast">
+      <div class="message">Loading forecast...</div>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  AirPulse • Environmental information for everyone<br>
+  Weather & air-quality data provided by Open-Meteo.<br>
+  Forecasts and measurements are estimates and may change.
+</div>
+
+</div>
+
+<script>
+"use strict";
+
+// ==========================================
+// AIRPULSE — APPLICATION CONFIGURATION
+// ==========================================
+
+const API = {
+  geo: "https://geocoding-api.open-meteo.com/v1/search",
+  weather: "https://api.open-meteo.com/v1/forecast",
+  air: "https://air-quality-api.open-meteo.com/v1/air-quality"
+};
+
+const $ = id => document.getElementById(id);
+
+let currentLocation = null;
+let unit = "C";
+let chart = null;
+let suggestionTimer = null;
+let searchController = null;
+let weatherData = null;
+let airData = null;
+
+const pollutants = [
+  {id:"pm25",key:"pm2_5"},
+  {id:"pm10",key:"pm10"},
+  {id:"o3",key:"ozone"},
+  {id:"no2",key:"nitrogen_dioxide"},
+  {id:"so2",key:"sulphur_dioxide"},
+  {id:"co",key:"carbon_monoxide"}
+];
+
+// ==========================================
+// HELPERS
+// ==========================================
+
+function number(value, decimals=1) {
+  if (value === null || value === undefined ||
+      !Number.isFinite(Number(value))) return "--";
+  return Number(value).toFixed(decimals);
+}
+
+function celsiusToF(c) {
+  return (c * 9/5) + 32;
+}
+
+function temperature(value) {
+  if (value === null || value === undefined ||
+      !Number.isFinite(Number(value))) return "--";
+  const result = unit === "F" ? celsiusToF(value) : value;
+  return `${Math.round(result)}°${unit}`;
+}
+
+function weatherDescription(code) {
+  const map = {
+    0:["Clear sky","☀️"],
+    1:["Mainly clear","🌤️"],
+    2:["Partly cloudy","⛅"],
+    3:["Overcast","☁️"],
+    45:["Fog","🌫️"],
+    48:["Depositing rime fog","🌫️"],
+    51:["Light drizzle","🌦️"],
+    53:["Moderate drizzle","🌦️"],
+    55:["Dense drizzle","🌧️"],
+    56:["Freezing drizzle","🌧️"],
+    57:["Heavy freezing drizzle","🌧️"],
+    61:["Slight rain","🌦️"],
+    63:["Moderate rain","🌧️"],
+    65:["Heavy rain","🌧️"],
+    66:["Freezing rain","🌧️"],
+    67:["Heavy freezing rain","🌧️"],
+    71:["Slight snowfall","🌨️"],
+    73:["Moderate snowfall","❄️"],
+    75:["Heavy snowfall","❄️"],
+    77:["Snow grains","❄️"],
+    80:["Rain showers","🌦️"],
+    81:["Moderate showers","🌧️"],
+    82:["Violent showers","⛈️"],
+    85:["Snow showers","🌨️"],
+    86:["Heavy snow showers","❄️"],
+    95:["Thunderstorm","⛈️"],
+    96:["Thunderstorm with hail","⛈️"],
+    99:["Heavy thunderstorm with hail","⛈️"]
+  };
+
+  return map[code] || ["Unknown condition","🌤️"];
+}
+
+function getAQI(value) {
+  if (value === null || value === undefined ||
+      !Number.isFinite(Number(value))) {
+    return {
+      name:"Unavailable",
+      color:"#9baac0",
+      description:"Air quality data is currently unavailable.",
+      tip:"Check again later for updated air quality information."
+    };
+  }
+
+  const aqi = Number(value);
+
+  if(aqi <= 50) return {
+    name:"Good",color:"#00e400",
+    description:"Air quality is satisfactory. Air pollution poses little or no risk.",
+    tip:"💡 Great conditions for normal outdoor activities."
+  };
+
+  if(aqi <= 100) return {
+    name:"Moderate",color:"#ffff00",
+    description:"Air quality is acceptable, but unusually sensitive people may experience effects.",
+    tip:"💡 Sensitive individuals should consider reducing prolonged outdoor exertion."
+  };
+
+  if(aqi <= 150) return {
+    name:"Unhealthy for Sensitive Groups",color:"#ff7e00",
+    description:"Sensitive groups may experience health effects.",
+    tip:"💡 Children, older adults and people with respiratory conditions should limit prolonged outdoor exertion."
+  };
+
+  if(aqi <= 200) return {
+    name:"Unhealthy",color:"#ff0000",
+    description:"Everyone may begin to experience health effects.",
+    tip:"💡 Consider reducing prolonged or intense outdoor activity."
+  };
+
+  if(aqi <= 300) return {
+    name:"Very Unhealthy",color:"#8f3f97",
+    description:"Health alert: everyone may experience more serious health effects.",
+    tip:"💡 Avoid strenuous outdoor activities and follow local health guidance."
+  };
+
+  return {
+    name:"Hazardous",color:"#7e0023",
+    description:"Health warning: everyone may experience serious health effects.",
+    tip:"💡 Stay indoors when possible and follow official local health advisories."
+  };
+}
+
+function dominantPollutant(data) {
+  const values = [
+    ["PM2.5",data.pm2_5],
+    ["PM10",data.pm10],
+    ["Ozone",data.ozone],
+    ["NO₂",data.nitrogen_dioxide],
+    ["SO₂",data.sulphur_dioxide],
+    ["CO",data.carbon_monoxide]
+  ];
+
+  const available = values.filter(x =>
+    Number.isFinite(x[1])
+  );
+
+  if(!available.length) return "Unavailable";
+
+  return available.reduce((a,b) =>
+    b[1] > a[1] ? b : a
+  )[0];
+}
+
+function showMessage(text) {
+  $("message").textContent = text;
+  $("message").classList.remove("hidden");
+}
+
+function hideMessage() {
+  $("message").classList.add("hidden");
+}
+
+function setLoading(loading) {
+  document.querySelector(".grid").classList.toggle("loading",loading);
+  $("status").innerHTML = loading
+    ? '<span class="spinner"></span> Updating...'
+    : "● Live data";
+}
+
+function formatTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([],{
+    hour:"2-digit",
+    minute:"2-digit"
+  });
+}
+
+function updatePeriod(isDay) {
+  document.body.dataset.period = isDay ? "day" : "night";
+  document.body.style.setProperty(
+    "--accent",
+    isDay ? "#62d6c4" : "#9aabff"
+  );
+}
+
+// ==========================================
+// GEOCODING / CITY SEARCH
+// ==========================================
+
+async function searchCities(query) {
+  const url = new URL(API.geo);
+  url.search = new URLSearchParams({
+    name:query,
+    count:6,
+    language:"en",
+    format:"json"
+  });
+
+  const response = await fetch(url);
+  if(!response.ok) throw new Error("Geocoding service unavailable");
+
+  const data = await response.json();
+  return data.results || [];
+}
+
+function displaySuggestions(cities) {
+  const box = $("suggestions");
+  box.innerHTML = "";
+
+  if(!cities.length) {
+    box.classList.add("hidden");
+    return;
+  }
+
+  cities.forEach(city => {
+    const item = document.createElement("div");
+    item.className = "suggestion";
+
+    item.textContent = [
+      city.name,
+      city.admin1,
+      city.country
+    ].filter(Boolean).join(", ");
+
+    item.addEventListener("click",() => {
+      selectCity(city);
+    });
+
+    box.appendChild(item);
+  });
+
+  box.classList.remove("hidden");
+}
+
+async function selectCity(city) {
+  $("suggestions").classList.add("hidden");
+  $("cityInput").value = city.name;
+
+  await loadCity({
+    name:city.name,
+    latitude:city.latitude,
+    longitude:city.longitude,
+    country:city.country
+  });
+}
+
+$("cityInput").addEventListener("input",e => {
+  const query = e.target.value.trim();
+
+  clearTimeout(suggestionTimer);
+
+  if(query.length < 2) {
+    $("suggestions").classList.add("hidden");
+    return;
+  }
+
+  suggestionTimer = setTimeout(async() => {
+    try {
+      const cities = await searchCities(query);
+      displaySuggestions(cities);
+    } catch(error) {
+      $("suggestions").classList.add("hidden");
+    }
+  },350);
+});
+
+$("searchBtn").addEventListener("click",async() => {
+  const query = $("cityInput").value.trim();
+
+  if(!query) {
+    showMessage("Please enter a city name.");
+    return;
+  }
+
+  try {
+    hideMessage();
+    $("suggestions").classList.add("hidden");
+
+    const cities = await searchCities(query);
+
+    if(!cities.length) {
+      showMessage("City not found. Try another city name.");
+      return;
+    }
+
+    await selectCity(cities[0]);
+
+  } catch(error) {
+    showMessage("Unable to search cities. Please check your internet connection.");
+  }
+});
+
+$("cityInput").addEventListener("keydown",e => {
+  if(e.key === "Enter") $("searchBtn").click();
+});
+
+document.addEventListener("click",e => {
+  if(!e.target.closest(".search-box")) {
+    $("suggestions").classList.add("hidden");
+  }
+});
+
+// ==========================================
+// FETCH WEATHER AND AIR QUALITY
+// ==========================================
+
+async function fetchJSON(url,signal) {
+  const response = await fetch(url,{signal});
+
+  if(!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function loadCity(city) {
+  if(!Number.isFinite(city.latitude) ||
+     !Number.isFinite(city.longitude)) {
+    showMessage("Invalid city coordinates.");
+    return;
+  }
+
+  if(searchController) searchController.abort();
+  searchController = new AbortController();
+
+  const signal = searchController.signal;
+
+  hideMessage();
+  setLoading(true);
+
+  currentLocation = city;
+
+  try {
+    const weatherURL = new URL(API.weather);
+
+    weatherURL.search = new URLSearchParams({
+      latitude:city.latitude,
+      longitude:city.longitude,
+      current:[
+        "temperature_2m",
+        "relative_humidity_2m",
+        "apparent_temperature",
+        "is_day",
+        "precipitation",
+        "weather_code",
+        "wind_speed_10m"
+      ].join(","),
+      hourly:[
+        "temperature_2m",
+        "precipitation_probability",
+        "weather_code"
+      ].join(","),
+      daily:[
+        "weather_code",
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "precipitation_probability_max"
+      ].join(","),
+      forecast_days:7,
+      timezone:"auto"
+    });
+
+    const airURL = new URL(API.air);
+
+    airURL.search = new URLSearchParams({
+      latitude:city.latitude,
+      longitude:city.longitude,
+      current:[
+        "us_aqi",
+        "pm2_5",
+        "pm10",
+        "ozone",
+        "nitrogen_dioxide",
+        "sulphur_dioxide",
+        "carbon_monoxide"
+      ].join(","),
+      timezone:"auto"
+    });
+
+    // Fetch both APIs together.
+    const [weather,air] = await Promise.all([
+      fetchJSON(weatherURL,signal),
+      fetchJSON(airURL,signal)
+    ]);
+
+    if(!weather.current || !air.current) {
+      throw new Error("Incomplete API data");
+    }
+
+    weatherData = weather;
+    airData = air;
+
+    renderAll();
+
+    $("status").textContent = "● Live data";
+
+    $("updated").textContent =
+      "Last updated: " +
+      new Date().toLocaleString();
+
+    // Remember the most recent city.
+    try {
+      localStorage.setItem("airpulse_city",
+        JSON.stringify(city));
+    } catch(e) {
+      console.warn("Could not save city preference",e);
+    }
+
+  } catch(error) {
+    if(error.name === "AbortError") return;
+
+    console.error(error);
+
+    if(!navigator.onLine) {
+      showMessage("You appear to be offline. Please reconnect and try again.");
+    } else {
+      showMessage("Unable to retrieve environmental data. Please try again shortly.");
+    }
+
+    $("status").textContent = "● Connection error";
+
+  } finally {
+    if(searchController &&
+       searchController.signal === signal) {
+      setLoading(false);
+    }
+  }
+}
+
+// ==========================================
+// RENDER AQI
+// ==========================================
+
+function renderAQI() {
+  const data = airData.current;
+  const value = data.us_aqi;
+  const info = getAQI(value);
+
+  $("aqiValue").textContent =
+    Number.isFinite(value) ? Math.round(value) : "--";
+
+  $("aqiCategory").textContent = info.name;
+  $("aqiCategory").style.background = info.color;
+
+  $("aqiDescription").textContent = info.description;
+
+  $("dominant").textContent =
+    "Dominant pollutant: " + dominantPollutant(data);
+
+  pollutants.forEach(p => {
+    $(p.id).textContent = number(data[p.key]);
+  });
+
+  $("healthTip").textContent = info.tip;
+
+  // Adapt the page background accent to the AQI category.
+  document.documentElement.style.setProperty(
+    "--aqi-color",info.color
+  );
+}
+
+// ==========================================
+// RENDER CURRENT WEATHER
+// ==========================================
+
+function renderWeather() {
+  const current = weatherData.current;
+  const [description,icon] =
+    weatherDescription(current.weather_code);
+
+  $("temperature").textContent =
+    temperature(current.temperature_2m);
+
+  $("feelsLike").textContent =
+    temperature(current.apparent_temperature);
+
+  $("condition").textContent = description;
+  $("weatherIcon").textContent = icon;
+
+  $("humidity").textContent =
+    number(current.relative_humidity_2m,0) + "%";
+
+  $("wind").textContent =
+    number(current.wind_speed_10m) + " km/h";
+
+  $("precipitation").textContent =
+    number(current.precipitation) + " mm";
+
+  updatePeriod(current.is_day === 1);
+}
+
+// ==========================================
+// RENDER HOURLY CHART
+// ==========================================
+
+function renderChart() {
+  if(typeof Chart === "undefined") {
+    $("hourlyChart").replaceWith(
+      Object.assign(document.createElement("p"),{
+        textContent:"Chart library could not load. Please check your internet connection."
+      })
+    );
+    return;
+  }
+
+  const hourly = weatherData.hourly;
+  const currentTime = new Date(weatherData.current.time).getTime();
+
+  // Find the current hour and display the next 24 points.
+  let start = hourly.time.findIndex(t =>
+    new Date(t).getTime() >= currentTime
+  );
+
+  if(start < 0) start = 0;
+
+  const times = hourly.time.slice(start,start+24);
+  const values = hourly.temperature_2m.slice(start,start+24);
+
+  const labels = times.map(t => formatTime(t));
+
+  const ctx = $("hourlyChart").getContext("2d");
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(ctx,{
+    type:"line",
+    data:{
+      labels,
+      datasets:[{
+        label:`Temperature (°${unit})`,
+        data:values.map(v =>
+          unit === "F" ? celsiusToF(v) : v
+        ),
+        borderColor:"#62d6c4",
+        backgroundColor:"rgba(98,214,196,.12)",
+        fill:true,
+        tension:.4,
+        pointRadius:3,
+        pointHoverRadius:6
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{
+        intersect:false,
+        mode:"index"
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:ctx =>
+              `${Math.round(ctx.raw)}°${unit}`
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{
+            color:getComputedStyle(document.body)
+              .getPropertyValue("--muted"),
+            maxTicksLimit:8
+          }
+        },
+        y:{
+          grid:{
+            color:"rgba(150,150,150,.12)"
+          },
+          ticks:{
+            color:getComputedStyle(document.body)
+              .getPropertyValue("--muted"),
+            callback:v=>`${Math.round(v)}°`
+          }
+        }
+      }
+    }
+  });
+}
+
+// ==========================================
+// RENDER 7-DAY FORECAST
+// ==========================================
+
+function renderForecast() {
+  const daily = weatherData.daily;
+  const container = $("forecast");
+
+  container.innerHTML = "";
+
+  daily.time.forEach((date,i) => {
+    const [description,icon] =
+      weatherDescription(daily.weather_code[i]);
+
+    const day = document.createElement("div");
+    day.className = "day";
+
+    const dayName = i === 0
+      ? "Today"
+      : new Date(date+"T12:00:00").toLocaleDateString(
+          undefined,{weekday:"short"}
+        );
+
+    const rain = daily.precipitation_probability_max[i];
+
+    const dayLabel = document.createElement("small");
+    dayLabel.textContent = dayName;
+
+    const weatherEmoji = document.createElement("span");
+    weatherEmoji.className = "icon";
+    weatherEmoji.textContent = icon;
+    weatherEmoji.title = description;
+
+    const high = document.createElement("strong");
+    high.textContent =
+      temperature(daily.temperature_2m_max[i]);
+
+    const low = document.createElement("small");
+    low.textContent =
+      temperature(daily.temperature_2m_min[i]);
+
+    const rainElement = document.createElement("div");
+    rainElement.className = "rain";
+    rainElement.textContent =
+      rain == null ? "Rain: --" : `💧 ${rain}%`;
+
+    day.append(
+      dayLabel,
+      weatherEmoji,
+      high,
+      low,
+      rainElement
+    );
+
+    container.appendChild(day);
+  });
+}
+
+// ==========================================
+// RENDER EVERYTHING
+// ==========================================
+
+function renderAll() {
+  $("cityName").textContent = [
+    currentLocation.name,
+    currentLocation.country
+  ].filter(Boolean).join(", ");
+
+  renderAQI();
+  renderWeather();
+  renderChart();
+  renderForecast();
+}
+
+// ==========================================
+// TEMPERATURE TOGGLE
+// ==========================================
+
+function changeUnit(nextUnit) {
+  if(unit === nextUnit) return;
+
+  unit = nextUnit;
+
+  $("celsius").classList.toggle("active",unit==="C");
+  $("fahrenheit").classList.toggle("active",unit==="F");
+
+  if(weatherData) {
+    renderWeather();
+    renderChart();
+    renderForecast();
+  }
+}
+
+$("celsius").addEventListener("click",() => changeUnit("C"));
+$("fahrenheit").addEventListener("click",() => changeUnit("F"));
+
+// ==========================================
+// USER LOCATION
+// ==========================================
+
+$("locationBtn").addEventListener("click",() => {
+  if(!navigator.geolocation) {
+    showMessage("Geolocation is not supported by your browser.");
+    return;
+  }
+
+  hideMessage();
+  $("locationBtn").textContent = "Locating...";
+
+  navigator.geolocation.getCurrentPosition(
+    async position => {
+      $("locationBtn").textContent = "📍 My location";
+
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      await loadCity({
+        name:"My Location",
+        latitude,
+        longitude,
+        country:""
+      });
+    },
+    error => {
+      $("locationBtn").textContent = "📍 My location";
+
+      const messages = {
+        1:"Location permission denied. Please allow location access in your browser.",
+        2:"Your location could not be determined.",
+        3:"Location request timed out. Try again."
+      };
+
+      showMessage(messages[error.code] ||
+        "Unable to access your location.");
+    },
+    {
+      enableHighAccuracy:false,
+      timeout:12000,
+      maximumAge:300000
+    }
+  );
+});
+
+// ==========================================
+// INITIALIZE APPLICATION
+// ==========================================
+
+async function init() {
+  // Restore last searched city.
+  try {
+    const saved = localStorage.getItem("airpulse_city");
+
+    if(saved) {
+      const city = JSON.parse(saved);
+
+      if(city &&
+         typeof city.name === "string" &&
+         Number.isFinite(city.latitude) &&
+         Number.isFinite(city.longitude)) {
+        await loadCity(city);
+        return;
+      }
+    }
+  } catch(error) {
+    console.warn("Saved city unavailable",error);
+  }
+
+  // Default city: Delhi.
+  try {
+    const cities = await searchCities("Delhi");
+
+    if(cities.length) {
+      await selectCity(cities[0]);
+    } else {
+      throw new Error("Default city unavailable");
+    }
+  } catch(error) {
+    console.error(error);
+    showMessage("Welcome to AirPulse! Search for a city to get started.");
+    $("cityName").textContent = "Welcome to AirPulse";
+    $("status").textContent = "● Ready";
+  }
+}
+
+window.addEventListener("online",() => {
+  if(currentLocation) loadCity(currentLocation);
+});
+
+window.addEventListener("offline",() => {
+  showMessage("You are offline. Live data requires an internet connection.");
+});
+
+init();
+
+</script>
+</body>
+</html>
